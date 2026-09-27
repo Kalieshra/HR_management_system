@@ -1,0 +1,96 @@
+{% load i18n %}<!DOCTYPE html>
+<html lang="{{ language }}" dir="{{ direction }}">
+  <head>
+    <meta charset="utf-8" />
+    <title>{{ title }}</title>
+    <style>
+      @page { size: A4 {{ page_orientation }}; margin: 12mm 10mm; }
+      body {
+        font-family: "Noto Sans Arabic", "Noto Sans", sans-serif;
+        font-size: 9pt;
+        color: #111;
+        direction: {{ direction }};
+      }
+      h1 { font-size: 13pt; margin: 0 0 8mm; text-align: center; }
+      .strip {
+        border: 1px solid #555;
+        border-radius: 2mm;
+        padding: 3mm 4mm;
+        margin-bottom: 4mm;
+        page-break-inside: avoid;
+      }
+      .strip header {
+        display: flex;
+        justify-content: space-between;
+        gap: 4mm;
+        border-bottom: 1px solid #999;
+        padding-bottom: 1.5mm;
+        margin-bottom: 2mm;
+      }
+      .strip header .who { font-weight: bold; }
+      .grid { display: flex; gap: 4mm; }
+      .grid section { flex: 1; }
+      .grid h2 {
+        font-size: 9pt;
+        margin: 0 0 1mm;
+        padding-bottom: 0.8mm;
+        border-bottom: 1px solid #ccc;
+      }
+      table { width: 100%; border-collapse: collapse; }
+      td { padding: 0.6mm 0; vertical-align: top; }
+      td.value {
+        text-align: {{ amount_align }};
+        font-variant-numeric: tabular-nums;
+        direction: ltr;
+        unicode-bidi: isolate;
+      }
+      .net {
+        margin-top: 2mm;
+        padding-top: 1.5mm;
+        border-top: 1px solid #555;
+        display: flex;
+        justify-content: space-between;
+        font-weight: bold;
+        font-size: 10pt;
+      }
+      .muted { color: #666; }
+    </style>
+  </head>
+  <body>
+    <h1>{{ title }}</h1>
+
+    {% for slip in slips %}
+      <article class="strip">
+        <header>
+          <span class="who">{{ slip.line.employee_name }} <span class="muted">({{ slip.line.employee_code }})</span></span>
+          <span class="muted">{{ slip.line.branch_snapshot }} · {{ slip.line.job_title_snapshot }}</span>
+        </header>
+
+        <div class="grid">
+          <section>
+            <h2>{{ labels.earnings }}</h2>
+            <table>
+              {% for row in slip.earnings %}
+                <tr><td>{{ row.label }}</td><td class="value">{{ row.value }}</td></tr>
+              {% endfor %}
+            </table>
+          </section>
+
+          <section>
+            <h2>{{ labels.deductions }}</h2>
+            <table>
+              {% for row in slip.deductions %}
+                <tr><td>{{ row.label }}</td><td class="value">{{ row.value }}</td></tr>
+              {% endfor %}
+            </table>
+          </section>
+        </div>
+
+        <div class="net">
+          <span>{{ labels.net }}</span>
+          <span class="value">{{ slip.net }}</span>
+        </div>
+      </article>
+    {% endfor %}
+  </body>
+</html>

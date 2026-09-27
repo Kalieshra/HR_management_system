@@ -1,0 +1,25 @@
+# Production overlay.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   (or: make up-prod)
+#
+# The base file runs Django's development server and `next dev`, which compile
+# on demand — fine while editing, far too slow for anyone actually using the
+# system. This overlay swaps in gunicorn and a real Next.js build.
+
+services:
+  backend:
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120"
+
+  worker:
+    command: celery -A config worker -l info --concurrency 2
+
+  beat:
+    command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+  frontend:
+    # Builds once at start-up, then serves the compiled app. `next.config.ts`
+    # reads NEXT_DIST_DIR, so build and start agree on where the output lives.
+    command: sh -c "npm run build && npm run start"

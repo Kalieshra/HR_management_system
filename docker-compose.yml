@@ -1,0 +1,86 @@
+name: hrms
+
+x-backend-base: &backend-base
+  build:
+    context: ./backend
+  # One image for backend, worker and beat — they run the same code, and
+  # without a shared name compose builds three copies of it.
+  image: hrms-backend:latest
+  env_file: [.env]
+  environment:
+    # Mounted outside /app so docker does not create a root-owned `docs/`
+    # directory inside the bind-mounted working tree.
+    REFERENCE_WORKBOOK: /reference/accounting_monthly.xlsx
+  volumes:
+    - ./backend:/app
+    - ./docs/reference:/reference:ro
+    - backend-media:/app/media
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-hrms}
+      POSTGRES_USER: ${POSTGRES_USER:-hrms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hrms}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports: ["${POSTGRES_HOST_PORT:-5432}:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hrms} -d ${POSTGRES_DB:-hrms}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    ports: ["${REDIS_HOST_PORT:-6379}:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    <<: *backend-base
+    command: python manage.py runserver 0.0.0.0:8000
+    ports: ["${BACKEND_HOST_PORT:-8000}:8000"]
+
+  worker:
+    <<: *backend-base
+    command: celery -A config worker -l info
+
+  beat:
+    <<: *backend-base
+    command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+  frontend:
+    build:
+      context: ./frontend
+    env_file: [.env]
+    environment:
+      # Its own build directory: the container bind-mounts your working tree, so
+      # without this its dev build and a host-side `npm run build` fight over
+      # the same `.next`.
+      NEXT_DIST_DIR: .next-docker
+    command: npm run dev
+    volumes:
+      - ./frontend:/app
+      # Keep the image's musl-built dependencies; the host's are glibc and the
+      # container cannot load them.
+      - /app/node_modules
+    ports: ["${FRONTEND_HOST_PORT:-3000}:3000"]
+    depends_on: [backend]
+
+volumes:
+  pgdata:
+  redisdata:
+  backend-media:

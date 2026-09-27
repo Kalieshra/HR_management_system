@@ -1,0 +1,11 @@
+.next
+node_modules
+package-lock.json
+
+# Playwright artefacts
+test-results
+playwright-report
+
+e2e/.auth
+
+.next-docker

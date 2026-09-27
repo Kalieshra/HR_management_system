@@ -1,0 +1,50 @@
+[project]
+name = "hrms-backend"
+version = "0.1.0"
+description = "Multi-tenant HR & payroll SaaS (Egypt) — Django backend"
+requires-python = ">=3.12"
+
+# ---------------------------------------------------------------------------
+# ruff
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["migrations", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "DJ", "SIM", "RUF"]
+ignore = [
+    "RUF001", # ambiguous unicode char — Arabic strings are intentional
+    "RUF002",
+    "RUF003",
+    "RUF012", # mutable class attrs in Django models/serializers
+]
+
+[tool.ruff.lint.per-file-ignores]
+"*/tests/*" = ["S101"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "accounts", "attendance", "audit", "companies",
+    "config", "core", "employees", "payroll", "reports",
+]
+
+# ---------------------------------------------------------------------------
+# black
+# ---------------------------------------------------------------------------
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+extend-exclude = "migrations"
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py"]
+addopts = "-q --strict-markers"
+markers = [
+    "workbook: parity tests against docs/reference/accounting_monthly.xlsx",
+]
